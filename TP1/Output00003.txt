@@ -1,1 +1,2 @@
-I'm the processus 3 on 16 processes.
+196373884/250000000 sont dans le disque
+Temps mis par le processeur 3 : 6.41843s

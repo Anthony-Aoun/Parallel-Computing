@@ -1,1 +1,2 @@
-I'm the processus 1 on 16 processes.
+196369718/250000000 sont dans le disque
+Temps mis par le processeur 1 : 6.54342s

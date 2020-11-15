@@ -1,1 +1,2 @@
-I'm the processus 2 on 16 processes.
+196366502/250000000 sont dans le disque
+Temps mis par le processeur 2 : 6.36059s

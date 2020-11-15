@@ -13,6 +13,10 @@
 
 ## Calcul de pi par lancer de fléchettes
 
+* Version bloquante : 25.874 s pour 1,000,000,000 fléchettes. On obtient PI = 3.14192.
+* Version non bloquante : 26.2985 s pour 1,000,000,000 fléchettes. On obtient PI = 3.14211.
+
+
 
 
 

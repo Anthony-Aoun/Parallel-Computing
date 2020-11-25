@@ -74,22 +74,22 @@ Matrix::operator * ( const std::vector<double>& u ) const
 
     const Matrix& A = *this;
     assert( u.size() == unsigned(m_ncols) );
-    std::vector<double> v(m_nrows, 0.);
+    std::vector<double> v(pas, 0.);
     for ( int i = rank*pas; i < (rank+1)*pas; ++i ) 
     {
         for ( int j = 0; j < m_ncols; ++j ) 
         {
-            v[i] += A(i,j)*u[j];
+            v[i - rank*pas] += A(i,j)*u[j];
         }            
     }
 
 
-    if (rank == 0)
-    {
-        vector <double> recbuf (m_nrows);
-        MPI_Gather (v.data (), pas, MPI_DOUBLE, recbuf.data (), pas, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-        return (vector<double> (recbuf));
-    }
+    MPI_Barrier(MPI_COMM_WORLD);
+    double recbuf [m_nrows];
+    MPI_Gather (v.data (), pas, MPI_DOUBLE, recbuf, pas, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    std::cout << std::endl << "here" << v << std::endl << std::endl;
+    return (vector<double> (recbuf, recbuf+m_nrows));
+    
     
     
 }
@@ -121,12 +121,19 @@ int main( int nargs, char* argv[] )
     MPI_Init( &nargs, &argv );
     const int N = 120;
     Matrix A(N);
-    std::cout  << "A : " << A << std::endl;
+    int rang;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rang);
+    if (rang == 0)
+    {
+        std::cout  << "A : " << A << std::endl;        
+    }
     std::vector<double> u( N );
     for ( int i = 0; i < N; ++i ) u[i] = i+1;
-    std::cout << " u : " << u << std::endl;
+    if (rang == 0)
+        std::cout << " u : " << u << std::endl;
     std::vector<double> v = A*u;
-    std::cout << "A.u = " << v << std::endl;
+    if (rang == 0)
+        std::cout << "process :" << rang << "A.u = " << v << std::endl;
 
     MPI_Finalize ();
     return EXIT_SUCCESS;

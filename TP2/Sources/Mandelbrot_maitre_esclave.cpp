@@ -119,12 +119,13 @@ int main(int argc, char *argv[] )
     const int maxIter = 8*65536;
 
     //MY CODE
-    int nbp, rank, root = 0, packet, packetDernier;
+    int nbp, rank, root = 0;
     double total_time = 0.;
+    MPI_Status status;
     chrono::time_point<chrono::system_clock> start, end;
     
     vector<int> image(W*H);
-    //vector<int> line(W);
+    vector<int> line(W);
 
     MPI_Init(&argc, &argv);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -133,31 +134,37 @@ int main(int argc, char *argv[] )
 
     //repartir les lignes sur des packets (nombre de lignes)
     if (nbp > H) nbp = H;
-    packet = H/nbp;
-    if (H%nbp == 0) packetDernier = packet;
-    else packetDernier = packet + H%nbp;
 
-    vector<int> block(W*packet);
-    vector<int> blockDernier(W*packetDernier);
-
-    //mettre le dernier packet à part.
-    //au cas où H n'est pas multiple de nbp
-    if (rank == nbp-1) {
-        int j = 0;
-        for (int i=(nbp-1-rank)*packet; i<((nbp-1-rank)*packet + packetDernier); i++) {
-            computeMandelbrotSetRow(W, H, maxIter, i, blockDernier.data() + W*(packetDernier-1-j));
-            j++;  
+    if (rank == 0) {
+        vector<int> result(W);
+        int count_task = 0;
+        for (int i=1; i<nbp; i++) {
+            MPI_Send(&count_task, 1, MPI_INT, i, 0, MPI_COMM_WORLD);
+            count_task ++;
         }
-        MPI_Gather(blockDernier.data(), W*packetDernier, MPI_INT, image.data(), W*packetDernier, MPI_INT, root, MPI_COMM_WORLD);
+        while (count_task < H) {
+            MPI_Recv(result.data(), W, MPI_INT, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
+            MPI_Send(&count_task, 1, MPI_INT, status.MPI_SOURCE, 0, MPI_COMM_WORLD);
+            for (int j=0; j<W; j++) {
+                image[status.MPI_TAG+j] = result[j];
+            }
+            count_task ++;
+        }
+        //signal d'arrêt
+        count_task = -1;
+        for (int i=1; i<nbp; i++) MPI_Send(&count_task, 1, MPI_INT, i, 0, MPI_COMM_WORLD);
     }
     else {
-        int j =0;
-        for (int i=(nbp-1-rank)*packet; i<(((nbp-1-rank)+1)*packet); i++) {
-            computeMandelbrotSetRow(W, H, maxIter, i, block.data() + W*(packet-1-j));
-            j++;
+        int num_task = 0;
+        while (num_task != -1) {
+            MPI_Recv(&num_task, 1, MPI_INT, root, 0, MPI_COMM_WORLD, &status);
+            if (num_task >= 0) {
+                computeMandelbrotSetRow(W, H, maxIter, num_task, line.data());
+                MPI_Send(line.data(), W, MPI_INT, root, num_task, MPI_COMM_WORLD);
+            }
         }
-        MPI_Gather(block.data(), W*packet, MPI_INT, image.data(), W*packet, MPI_INT, root, MPI_COMM_WORLD);
     }
+
     end = chrono::system_clock::now();
     chrono::duration<double> elapsed_seconds = end-start;
     double time = elapsed_seconds.count();

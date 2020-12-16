@@ -8,6 +8,7 @@ double dot( std::vector<double>& u, std::vector<double>& v )
 {
   assert(u.size() == v.size());
   double scal = 0.;
+  #pragma omp parallel for reduction (+:scal) 
   for ( size_t i = 0; i < u.size(); ++i ) {
     scal += u[i]*v[i];
   }
@@ -40,6 +41,7 @@ int main( int nargs, char* vargs[])
 
   start = std::chrono::system_clock::now();
   std::vector<double> result(nbSamples);
+  
   for ( int iSample = 0; iSample < nbSamples; ++iSample )
     result[iSample] = dot(U[iSample],V[iSample]);
   end = std::chrono::system_clock::now();

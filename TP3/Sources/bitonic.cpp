@@ -9,6 +9,7 @@
 # include <chrono>
 # include <stdexcept>
 # include "Vecteur.hpp"
+#include <thread>
 using namespace Algebra;
 
 // Tri Parallèle Bitonic
@@ -18,10 +19,14 @@ namespace Bitonic
   void _compare( bool up, Obj* objs, int len )
   {
     int dist = len/2;
-    for ( int i = 0; i < dist; ++i ) {
-      if ( (objs[i] > objs[i+dist]) == up ) {
-	std::swap(objs[i],objs[i+dist]);
-      }
+    std::thread t[dist];
+    for (int i = 0; i<dist; i++)
+    {
+      t[i] = std::thread ([](bool up,const Obj*& objs, int len, int dist, int i) {if ( (objs[i] > objs[i+dist]) == up ) {std::swap(objs[i],objs[i+dist]);}});
+    }
+    for (int i = 0; i<dist; i++)
+    {
+      t[i].join();
     }
   }
   // --------------------------------------------

@@ -16,7 +16,7 @@ void dot_part( const std::vector<double>& u, const std::vector<double>& v,
 }
 double dot( std::vector<double>& u, std::vector<double>& v )
 {
-  int num_threads = std::thread::hardware_concurrency();
+  int num_threads = 6;
   std::vector<std::thread> threads; threads.reserve(num_threads);
   std::vector<double> partial_sums(num_threads);
   std::size_t dim_loc = u.size()/num_threads;

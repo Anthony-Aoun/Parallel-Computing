@@ -70,29 +70,25 @@ int main(int argc, char ** argv)
     while(1) {
         start = std::chrono::system_clock::now();
 
-        omp_set_num_threads(5);
+        omp_set_num_threads(8);
         #pragma omp parallel shared(start, end1, end2)
         {
 
-        #pragma omp sections nowait
-        {
         //un thread (premier arrivé) va s'en charger et les autres ne vont pas l'attendre 
-        #pragma omp section
+        #pragma omp single nowait
         {
         gr.render(g);
         //fin affichage
         end2 = std::chrono::system_clock::now();
         }
-        #pragma omp section
-        {
-        //le deuxième thread fait cette partie qui est elle même multithreadée dans mise_a_jour
+
+        //le reste des thread font cette partie qui est elle même multithreadée
         mise_a_jour(param, width, height, g.data(), g_next.data());
         g_next.swap(g);
         //fin mise à jour
         end1 = std::chrono::system_clock::now();
-        }
 
-        } //end sections
+        #pragma omp barrier //point de rencontre
       } //end omp parallel
 
         std::chrono::duration<double> elaps1 = end1 - start;

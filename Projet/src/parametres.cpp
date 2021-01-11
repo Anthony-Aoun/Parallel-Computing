@@ -64,6 +64,7 @@ mise_a_jour(const parametres& params, int width, int height, const char* galaxie
 {
     std::random_device thread_device;
     std::default_random_engine rand_thread(thread_device());
+    // std::cout << omp_get_thread_num() << std::endl;
     #pragma omp for
     for ( i = 0; i < height; ++i )
       {

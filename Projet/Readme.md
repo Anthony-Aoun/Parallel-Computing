@@ -2,24 +2,24 @@
 
 ## Informations sur ma machine
 
-Architecture:                    x86_64
-CPU op-mode(s):                  32-bit, 64-bit
-Byte Order:                      Little Endian
-Address sizes:                   39 bits physical, 48 bits virtual
-CPU(s):                          4
-On-line CPU(s) list:             0-3
-Thread(s) per core:              2
-Core(s) per socket:              2
-Socket(s):                       1
-NUMA node(s):                    1
-Vendor ID:                       GenuineIntel
-CPU family:                      6
-Model:                           142
-Model name:                      Intel(R) Core(TM) i7-7500U CPU @ 2.70GHz
-Stepping:                        9
-CPU MHz:                         588.090
-CPU max MHz:                     3500.0000
-CPU min MHz:                     400.0000
+Architecture:                    x86_64 \
+CPU op-mode(s):                  32-bit, 64-bit \
+Byte Order:                      Little Endian \
+Address sizes:                   39 bits physical, 48 bits virtual \
+CPU(s):                          4 \
+On-line CPU(s) list:             0-3 \
+Thread(s) per core:              2 \
+Core(s) per socket:              2 \
+Socket(s):                       1 \
+NUMA node(s):                    1 \
+Vendor ID:                       GenuineIntel \
+CPU family:                      6 \
+Model:                           142 \
+Model name:                      Intel(R) Core(TM) i7-7500U CPU @ 2.70GHz \
+Stepping:                        9 \
+CPU MHz:                         588.090 \
+CPU max MHz:                     3500.0000 \
+CPU min MHz:                     400.0000 \
 
 ## Execution en séquentiel
 

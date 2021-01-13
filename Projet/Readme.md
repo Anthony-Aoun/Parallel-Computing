@@ -19,7 +19,7 @@ Model name:                      Intel(R) Core(TM) i7-7500U CPU @ 2.70GHz \
 Stepping:                        9 \
 CPU MHz:                         588.090 \
 CPU max MHz:                     3500.0000 \
-CPU min MHz:                     400.0000 \
+CPU min MHz:                     400.0000 
 
 ## Execution en séquentiel
 

@@ -51,12 +51,70 @@ L'execution après parallélisation de boucle en mémoire partagée donne à pr�
 
 CPU(ms) : calcul 1.968  affichage 1.7388
 
-Nous avons gagné considérablement en temps de calcul avec un speedup S(n) = 11.
+On a gagné considérablement en temps de calcul avec un speedup S(n) = 11.
 
-Nous remarquons qu'à présent que la boucle de calcul et la boucle d’affichage prennent un temps similaire.
+On remarque à présent que la boucle de calcul et la boucle d’affichage prennent un temps similaire.
 
 ## Recouvrement calcul / affichage en mémoire partagée
 
-On utilise des sections parallèles d'OpenMP dans le fichier colonisation.cpp.
+On utilise OpenMP avec sections parallèles dans la boucle while(1) du main du fichier colonisation.cpp.
+
+On utilise nowait qui fait que les threads ne vont pas s'attendre à la fin de la clause pour pouvoir commencer 
+la mise à jour alors que l'affichage n'est pas encore terminé. On crèe deux sections dont chacune va être executée
+par un thread. La première est celle de l'affochage, alors que la deuxième est celle de la mise à jour. La section de 
+mise à jour est elle même multithreadée garce à la parallélisation effectuée dans la partie précédente.
+
+L'execution après recouvrement des entrées/sorties par du calcul donne :
+
+CPU(ms) : calcul 6.057  affichage 4.0176
+
+On constate qu'on perd en accélération puisque le temps d'affichage a augmenté et le temps de calcul est plus long que
+celui de la première partie.Il est possible que l'on peut pas accélérer le code puisque l'affichage prend trop de bande
+passante mémoire et empêche par conséquent d'avoir une accélération pour calculer la nouvelle génération. Il y a donc 
+memory bound.
+
+## Parallélisation en mémoire distribuée
+
+On utilise MPI avec plusieurs processus (taches) avec : un coordinateur (le root) et des travailleurs.
+
+On utilisera le root pour afficher le résultat à l’écran et pour les autres processus, on découpera la grille de pixel 
+en plusieurs morceaux, par tranches horizontales. On obtiendra alors des sous-grilles auxquelles on rajoutera sur chaque 
+bord des cellules fantômes où on calcule si la planète est habitée, habitable ou inhabitable. Ceci permet aux cellules
+du bord de connaitre l'état des cellules voisines.
+
+Ainsi, une cellule “fantôme” de la première grille enverra donc son nouvel état à la seconde grille qui mettra sa cellule 
+correspondante à jour. La mise à jour dans les zones critiques est assurée par la méthode insert-vector-fantome. La stratégie
+des cellules fantomes permet donc le raccordement des domaines.
+
+L'algorithme à mémoire distribuée travaille comme suit :
+
+- Le processus root envoie la grande matrice à tous les autres processus et recoit les sous-matrice mises à jour. 
+Il se charge de raccorde les sous-matrices, ajouter les cellules fantomes et de mettre à jour les zones critiques
+pour que tout soit en accord (habitée, habitable ou inhabitable). Ce processus se charge aussi de l'affichage.
+
+- Chaque autre processus recoit la grande matrice, met à jour la sous-matrice qui lui est attribuée et envoie le 
+résultat au root.
+
+L'execution après parallélisation en mémoire distribuée avec 4 processus donne :
+
+CPU(ms) : calcul 19.510  affichage 2.416
+
+Nous remarquons que nous n'avons pas gagné en temps de calcul (speedup = 1) et même perdu en temps d'affichage (speedup < 1).
+Ceci peut être expliqué par le fait que ma machine a uniquement 2 coeurs et que l'échange de messages au sein d'MPI est
+couteux. De même l'existence de zones séquentielles non parallélisables peut rendre difficile l'optimisation en temps de
+calcul et d'affichage.
+
+NB: L'envoi et la réception cellule par cellule n'est pas convenable car il a une mauvaise influence sur la granularité.
+En effet, il ne faut pas que les sous-taches soient trop petites sinon il y aura beaucoup d'echanges et on perd en efficacité.
+
+## Parallélisation en mémoire partagée et distribuée
+
+
+
+
+
+
+
+
 
 

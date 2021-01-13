@@ -151,12 +151,14 @@ int main(int argc, char *argv[] )
         MPI_Gather(blockDernier.data(), W*packetDernier, MPI_INT, image.data(), W*packetDernier, MPI_INT, root, MPI_COMM_WORLD);
     }
     else {
+        /////////////////////////////////////////////
         int j =0;
         for (int i=(nbp-1-rank)*packet; i<(((nbp-1-rank)+1)*packet); i++) {
             computeMandelbrotSetRow(W, H, maxIter, i, block.data() + W*(packet-1-j));
             j++;
         }
         MPI_Gather(block.data(), W*packet, MPI_INT, image.data(), W*packet, MPI_INT, root, MPI_COMM_WORLD);
+        /////////////////////////////////////////////
     }
     end = chrono::system_clock::now();
     chrono::duration<double> elapsed_seconds = end-start;

@@ -26,7 +26,7 @@ int main(int argc, char *argv[] ) {
     MPI_Comm_size(MPI_COMM_WORLD, &nbp);
     
     if (nbp == 3) {
-        MPI_Scatter(sendarr, 2, MPI_INT, recbuf, 3, MPI_INT, root, MPI_COMM_WORLD);
+        MPI_Scatter(sendarr, 2, MPI_INT, recbuf, 2, MPI_INT, root, MPI_COMM_WORLD);
         MPI_Gather(&rank, 1, MPI_INT, recarr, 1, MPI_INT, root, MPI_COMM_WORLD);
         
         end = chrono::system_clock::now();

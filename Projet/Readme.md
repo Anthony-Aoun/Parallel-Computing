@@ -121,7 +121,7 @@ L'execution avec 3 processus et 2 threads donne :
 
 CPU(ms) : calcul 3.074  affichage 6.29365
 
-Nous avons ainsi un speedup de 16 pour le calcul mais une dégradation du temps d'affichage. Ceci peut être expliqué par la perte de
+Nous avons ainsi un speedup de 7 pour le calcul mais une dégradation du temps d'affichage. Ceci peut être expliqué par la perte de
 temps pour échanger les messages ce qui attarde l'affichage.
 
 

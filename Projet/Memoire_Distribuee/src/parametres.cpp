@@ -55,41 +55,47 @@ bool a_un_systeme_proche_colonisable(int i, int j, int width, int height, const 
 }
 //_ ______________________________________________________________________________________________ _
 void 
-mise_a_jour(const parametres& params, int width, int height_debut, int height_fin, int height,  int* galaxie_previous,  int* galaxie_next,  int* galaxie_previous_full)
+mise_a_jour(const parametres& params, int width, int height, const int* galaxie_previous, int* galaxie_next)
 {
     int i, j;
-    int height_difference = height_fin - height_debut;
-    memcpy(galaxie_next, galaxie_previous, width*height_difference*sizeof(int));
- 
-    for ( i = height_debut; i < height_fin; ++i )
+    
+    memcpy(galaxie_next, galaxie_previous, width*(height+2)*sizeof(int));
+
+    for ( i = 1; i < height+1; ++i )
       {
-        int i_local = i - height_debut +1;
         for ( j = 0; j < width; ++j )
         {
-            if (galaxie_previous_full[i*width+j] == 1)
+            if (galaxie_previous[i*width+j] == habitee)
             {
-                if ( a_un_systeme_proche_colonisable(i, j, width, height, galaxie_previous_full) )
+                if ( a_un_systeme_proche_colonisable(i, j, width, height+1, galaxie_previous) )
                 {
                     expansion e = calcul_expansion(params);
                     if (e == expansion_isotrope)
                     {
-                      if ( (i>0) && (galaxie_previous_full[(i-1)*width+j] != inhabitable) )
+                      if ( (galaxie_previous[(i-1)*width+j] != inhabitable) )
                         {
-                            galaxie_next[(i_local-1)*width+j] = habitee;
+                            galaxie_next[(i-1)*width+j] = habitee;
                         }
-                      if ( (i<height) &&  (galaxie_previous_full[(i+1)*width+j] != inhabitable) )
+                        else if (i ==1)
                         {
-                            galaxie_next[(i_local+1)*width+j] = habitee;
+                            std::cout<< "Erreur: inhabitable vers le bas, i = "<< i << std::endl; exit (-1);
                         }
-                      if ( (j > 0) && (galaxie_previous_full[i*width+j-1] != inhabitable) )
+                      if (  (galaxie_previous[(i+1)*width+j] != inhabitable) )
                         {
-                            galaxie_next[i_local*width+j-1] = habitee;
+                            galaxie_next[(i+1)*width+j] = habitee;
                         }
-                      if ( (j < width-1) && (galaxie_previous_full[i*width+j+1] != inhabitable) )
+                    else if (i ==height)
                         {
-                            galaxie_next[i_local*width+j+1] = habitee;
+                            std::cout<< "Erreur: inhabitable vers le haut, i = "<< i << std::endl; exit (-1);
                         }
-                        
+                      if ( (j > 0) && (galaxie_previous[i*width+j-1] != inhabitable) )
+                        {
+                            galaxie_next[i*width+j-1] = habitee;
+                        }
+                      if ( (j < width-1) && (galaxie_previous[i*width+j+1] != inhabitable) )
+                        {
+                            galaxie_next[i*width+j+1] = habitee;
+                        }
                     }
                     else if (e == expansion_unique)
                     {
@@ -98,24 +104,36 @@ mise_a_jour(const parametres& params, int width, int height_debut, int height_fi
                         do
                         {
                             int dir = std::rand()%4;
-                            if ( (0 == dir) && (galaxie_previous_full[(i-1)*width+j] != inhabitable) )
+                            if ( (0 == dir) && (galaxie_previous[(i-1)*width+j] != inhabitable) )
                             {
-                                galaxie_next[(i_local-1)*width+j] = habitee;
+                                galaxie_next[(i-1)*width+j] = habitee;
                                 ok = 1;
                             }
-                            if ( (1 == dir) && (galaxie_previous_full[(i+1)*width+j] != inhabitable) )
+                            else if ((0 == dir) && (i == 1))
                             {
-                                galaxie_next[(i_local+1)*width+j] = habitee;
+                                std::cout<< "Erreur: inhabitable vers le bas, i = "<< i << std::endl; //exit (-1);
+                                galaxie_next[(i-1)*width+j] = habitee;
                                 ok = 1;
                             }
-                            if ( (j>0) && (2 == dir) && (galaxie_previous_full[i*width+j-1] != inhabitable) )
+                            if (  (1 == dir) && (galaxie_previous[(i+1)*width+j] != inhabitable) )
                             {
-                                galaxie_next[i_local*width+j-1] = habitee;
+                                galaxie_next[(i+1)*width+j] = habitee;
                                 ok = 1;
                             }
-                            if ( (j<width-1) && (3 == dir) && (galaxie_previous_full[i*width+j+1] != inhabitable) )
+                            else if ((1 == dir) && (i == height))
                             {
-                                galaxie_next[i_local*width+j+1] = habitee;
+                                std::cout<< "Erreur: inhabitable vers le haut, i = "<< i << std::endl; //exit (-1);
+                                galaxie_next[(i+1)*width+j] = habitee;
+                                ok = 1;
+                            }
+                            if ( (j>0) && (2 == dir) && (galaxie_previous[i*width+j-1] != inhabitable) )
+                            {
+                                galaxie_next[i*width+j-1] = habitee;
+                                ok = 1;
+                            }
+                            if ( (j<width-1) && (3 == dir) && (galaxie_previous[i*width+j+1] != inhabitable) )
+                            {
+                                galaxie_next[i*width+j+1] = habitee;
                                 ok = 1;
                             }
                         } while (ok == 0);
@@ -123,17 +141,18 @@ mise_a_jour(const parametres& params, int width, int height_debut, int height_fi
                 }// Fin si il y a encore un monde non habite et habitable
                 if (calcul_depeuplement(params))
                 {
-                    galaxie_next[i_local*width+j] = habitable;
+                    
+                    galaxie_next[i*width+j] = habitable;
                 }
                 if (calcul_inhabitable(params))
                 {
-                    galaxie_next[i_local*width+j] = inhabitable;
+                    galaxie_next[i*width+j] = inhabitable; 
                 }
             }  // Fin si habitee
-            else if (galaxie_previous_full[i_local*width+j] == habitable)
+            else if (galaxie_previous[i*width+j] == habitable)
             {
                 if (apparition_technologie(params))
-                    galaxie_next[i_local*width+j] = habitee;
+                    galaxie_next[i*width+j] = habitee;
             }
             else { // inhabitable
               // nothing to do : le systeme a explose

@@ -82,24 +82,29 @@ en plusieurs morceaux, par tranches horizontales. On obtiendra alors des sous-gr
 bord des cellules fantômes où on calcule si la planète est habitée, habitable ou inhabitable. Ceci permet aux cellules
 du bord de connaitre l'état des cellules voisines.
 
-Ainsi, une cellule “fantôme” de la première grille enverra donc son nouvel état à la seconde grille qui mettra sa cellule 
-correspondante à jour. La mise à jour dans les zones critiques est assurée par la méthode insert-vector-fantome. La stratégie
-des cellules fantomes permet donc le raccordement des domaines.
+Par exemple, une cellule “fantôme” de la première grille enverra son nouvel état à la seconde grille qui mettra sa cellule 
+correspondante à jour. La mise à jour dans les zones critiques est assurée par les méthodes insert-vecteur-avant et
+insert-vecteur-apres . La stratégie des cellules fantomes permet donc le raccordement des domaines.
 
 L'algorithme à mémoire distribuée travaille comme suit :
 
-- Le processus root envoie la grande matrice à tous les autres processus et recoit les sous-matrice mises à jour. 
-Il se charge de raccorde les sous-matrices, ajouter les cellules fantomes et de mettre à jour les zones critiques
-pour que tout soit en accord (habitée, habitable ou inhabitable). Ce processus se charge aussi de l'affichage.
+- La grande matrice est découpée en nbp tranches (où nbp est le nombre de processus) et chaque tranche est envoyée à un processus.
+La partie recue par le root ne sera pas traitée. 
 
-- Chaque autre processus recoit la grande matrice, met à jour la sous-matrice qui lui est attribuée et envoie le 
-résultat au root.
+- Chaque processus qui n'est pas root recoit la sous-matrice, la met à jour (on modifie les indices de height dans la méthode 
+mise-a-jour), recoit sa première et dernière ligne des cellules fantomes des processus qui sont en dessus et en dessous (s'ils 
+existent), et ses cellules fantomes revoient à leur tour les informations aux autres sous-matrices. On oublie pas de raccorder 
+les zones critiques après reception des cellules fantomes. Finalement on demande un Gather des sous-matrices au niveau du root. 
 
-L'execution après parallélisation en mémoire distribuée avec 4 processus donne :
+- Le processus root recoit les différententes sous-matrices qui sont raccordées grace à Gather. Puis, le root se charge uniquement 
+de l'affichage.
 
-CPU(ms) : calcul 19.510  affichage 2.416
 
-Nous remarquons que nous n'avons pas gagné en temps de calcul (speedup = 1) et même perdu en temps d'affichage (speedup < 1).
+L'execution après parallélisation en mémoire distribuée avec 3 processus donne :
+
+CPU(ms) : calcul 15.695  affichage 3.7012
+
+Nous remarquons que nous avons légèrement gagné en temps de calcul (speedup = 1.5) et même perdu en temps d'affichage (speedup < 1).
 Ceci peut être expliqué par le fait que ma machine a uniquement 2 coeurs et que l'échange de messages au sein d'MPI est
 couteux. De même l'existence de zones séquentielles non parallélisables peut rendre difficile l'optimisation en temps de
 calcul et d'affichage.
@@ -108,6 +113,16 @@ NB: L'envoi et la réception cellule par cellule n'est pas convenable car il a u
 En effet, il ne faut pas que les sous-taches soient trop petites sinon il y aura beaucoup d'echanges et on perd en efficacité.
 
 ## Parallélisation en mémoire partagée et distribuée
+
+À présent, on utilise la parllélisation de boucle en mémoire partagée de la première partie avec la parallélisation en mémoire 
+distribuée. Il faut de même remplacer MPI-Init par MPI-Init-thread puis modifier CXX = mpic++ -fopenmp dans Make-linux.inc.
+
+L'execution avec 3 processus et 2 threads donne :
+
+CPU(ms) : calcul 3.074  affichage 6.29365
+
+Nous avons ainsi un speedup de 16 pour le calcul mais une dégradation du temps d'affichage. Ceci peut être expliqué par la perte de
+temps pour échanger les messages ce qui attarde l'affichage.
 
 
 

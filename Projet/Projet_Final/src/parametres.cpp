@@ -53,109 +53,97 @@ bool a_un_systeme_proche_colonisable(int i, int j, int width, int height, const 
 }
 //_ ______________________________________________________________________________________________ _
 void 
-mise_a_jour(const parametres& params, int width, int height_debut, int height_fin, int height,  int* galaxie_previous,  int* galaxie_next,  int* galaxie_previous_full)
+mise_a_jour(const parametres& params, int width, int height, const int* galaxie_previous, int* galaxie_next)
 {
     int i, j;
-    int height_difference = height_fin - height_debut;
-    memcpy(galaxie_next, galaxie_previous, width*height_difference*sizeof(int));
-    // std::cout<< "tour"<<std::endl;
-    // std::cout<<"parametres : " << params.apparition_civ << "; "
-    //                             << params.disparition << "; "
-    //                             << params.expansion << "; "
-    //                             << params.inhabitable<< "; " << std::endl;
-    omp_set_num_threads(1);
-    #pragma omp parallel 
-    {
-        std::random_device thread_device;
-        std::default_random_engine rand_thread(thread_device());
-        #pragma omp for
-        for ( i = height_debut; i < height_fin; ++i )
-          {
-            //int i_local = i - height_debut +1;
-            for ( j = 0; j < width; ++j )
-            {
-                if (galaxie_previous_full[i*width+j] == 1)
-                {
-                    //std::cout <<"la case " << i << ", "<<  j << " est habitee; height_debut = "<< height_debut <<std::endl;
-                    if ( a_un_systeme_proche_colonisable(i, j, width, height, galaxie_previous_full) )
-                    {
-                        expansion e = calcul_expansion(params, (double)(rand_thread()/(1.*RAND_MAX)));                        //if (height_debut!=0)
-                            //std::cout <<"la case " << i << ", "<<  j << " a un systeme proche colonisable, e = "<< e  << "; height_debut = "<< height_debut<<std::endl;
-                        if (e == expansion_isotrope)
-                        {
-                            //std::cout <<"la case " << i << ", "<<  j << "s'etend de maniere isotrope" <<std::endl;
-                          if ( (i>0) && (galaxie_previous_full[(i-1)*width+j] != inhabitable) )
-                            {
-                                galaxie_next[((i - height_debut +1)-1)*width+j] = habitee;
-                            }
-                          if ( (i<height) &&  (galaxie_previous_full[(i+1)*width+j] != inhabitable) )
-                            {
-                                galaxie_next[((i - height_debut +1)+1)*width+j] = habitee;
-                            }
-                          if ( (j > 0) && (galaxie_previous_full[i*width+j-1] != inhabitable) )
-                            {
-                                galaxie_next[(i - height_debut +1)*width+j-1] = habitee;
-                            }
-                          if ( (j < width-1) && (galaxie_previous_full[i*width+j+1] != inhabitable) )
-                            {
-                                galaxie_next[(i - height_debut +1)*width+j+1] = habitee;
-                            }
-                            
-                        }
-                        else if (e == expansion_unique)
-                        {
-                            //std::cout <<"la case " << i << ", "<<  j << "s'etend de maniere non isotrope" <<std::endl;
-                            // Calcul de la direction de l'expansion :
-                            int ok = 0;
-                            do
-                            {
-                                int dir = rand_thread()%4;
-                                if ( (0 == dir) && (galaxie_previous_full[(i-1)*width+j] != inhabitable) )
-                                {
-                                    galaxie_next[((i - height_debut +1)-1)*width+j] = habitee;
-                                    ok = 1;
-                                }
-                                if ( (1 == dir) && (galaxie_previous_full[(i+1)*width+j] != inhabitable) )
-                                {
-                                    galaxie_next[((i - height_debut +1)+1)*width+j] = habitee;
-                                    ok = 1;
-                                }
-                                if ( (j>0) && (2 == dir) && (galaxie_previous_full[i*width+j-1] != inhabitable) )
-                                {
-                                    galaxie_next[(i - height_debut +1)*width+j-1] = habitee;
-                                    ok = 1;
-                                }
-                                if ( (j<width-1) && (3 == dir) && (galaxie_previous_full[i*width+j+1] != inhabitable) )
-                                {
-                                    galaxie_next[(i - height_debut +1)*width+j+1] = habitee;
-                                    ok = 1;
-                                }
-                            } while (ok == 0);
-                        }// End if (e == expansion_unique)
-                    }// Fin si il y a encore un monde non habite et habitable
-                    if (calcul_depeuplement(params,(double)(rand_thread()/(1.*RAND_MAX))))
-                    {
-                        //std::cout <<"la case " << i << ", "<<  j << "se dépeuple" <<std::endl;
-                        galaxie_next[(i - height_debut +1)*width+j] = habitable;
-                    }
-                    if (calcul_inhabitable(params, (double)(rand_thread()/(1.*RAND_MAX))))
-                    {
-                        //std::cout <<"la case " << i << ", "<<  j << "devient inhabitable" <<std::endl;
-                        galaxie_next[(i - height_debut +1)*width+j] = inhabitable;
-                    }
-                }  // Fin si habitee
-                else if (galaxie_previous_full[i*width+j] == habitable)
-                {
-                    if (apparition_technologie(params, (double)(rand_thread()/(1.*RAND_MAX))))
-                        galaxie_next[(i - height_debut +1)*width+j] = habitee;
-                }
-                else { // inhabitable
-                  // nothing to do : le systeme a explose
-                }
-                // if (galaxie_previous...)
-            }// for (j)
-          }// for (i)
-    }
+    
+    memcpy(galaxie_next, galaxie_previous, width*(height+2)*sizeof(int));
 
+ omp_set_num_threads(2);
+ #pragma omp parallel
+{
+    std::random_device thread_device;
+    std::default_random_engine rand_thread(thread_device());
+    // std::cout << omp_get_thread_num() << std::endl;
+    #pragma omp for private(j)
+    for ( i = 1; i < height+1; ++i )
+      {
+        for ( j = 0; j < width; ++j )
+        {
+            if (galaxie_previous[i*width+j] == habitee)
+            {
+                if ( a_un_systeme_proche_colonisable(i, j, width, height+1, galaxie_previous) )// on va deborder sur les cellules fantomes... pas grave... elles ne seront pas prises en compte pour le calcul 
+                {
+                    expansion e = calcul_expansion(params, (double)(rand_thread()/(1.*RAND_MAX)));
+                    if (e == expansion_isotrope)
+                    {
+                      if ((galaxie_previous[(i-1)*width+j] != inhabitable) )
+                        {
+                            galaxie_next[(i-1)*width+j] = habitee;
+                        }
+                      if ((galaxie_previous[(i+1)*width+j] != inhabitable) )
+                        {
+                            galaxie_next[(i+1)*width+j] = habitee;
+                        }
+                      if ( (j > 0) && (galaxie_previous[i*width+j-1] != inhabitable) )
+                        {
+                            galaxie_next[i*width+j-1] = habitee;
+                        }
+                      if ( (j < width-1) && (galaxie_previous[i*width+j+1] != inhabitable) )
+                        {
+                            galaxie_next[i*width+j+1] = habitee;
+                        }
+                    }
+                    else if (e == expansion_unique)
+                    {
+                        // Calcul de la direction de l'expansion :
+                        int ok = 0;
+                        do
+                        {
+                            int dir = rand_thread()%4;
+                            if ((0 == dir) && (galaxie_previous[(i-1)*width+j] != inhabitable) )
+                            {
+                                galaxie_next[(i-1)*width+j] = habitee;
+                                ok = 1;
+                            }
+                            if ((1 == dir) && (galaxie_previous[(i+1)*width+j] != inhabitable) )
+                            {
+                                galaxie_next[(i+1)*width+j] = habitee;
+                                ok = 1;
+                            }
+                            if ( (j>0) && (2 == dir) && (galaxie_previous[i*width+j-1] != inhabitable) )
+                            {
+                                galaxie_next[i*width+j-1] = habitee;
+                                ok = 1;
+                            }
+                            if ( (j<width-1) && (3 == dir) && (galaxie_previous[i*width+j+1] != inhabitable) )
+                            {
+                                galaxie_next[i*width+j+1] = habitee;
+                                ok = 1;
+                            }
+                        } while (ok == 0);
+                    }// End if (e == expansion_unique)
+                }// Fin si il y a encore un monde non habite et habitable
+                if (calcul_depeuplement(params, (double)(rand_thread()/(1.*RAND_MAX))))
+                {
+                    galaxie_next[i*width+j] = habitable;
+                }
+                if (calcul_inhabitable(params, (double)(rand_thread()/(1.*RAND_MAX))))
+                {
+                    galaxie_next[i*width+j] = inhabitable;
+                }
+            }  // Fin si habitee
+            else if (galaxie_previous[i*width+j] == habitable)
+            {
+                if (apparition_technologie(params, (double)(rand_thread()/(1.*RAND_MAX))))
+                    galaxie_next[i*width+j] = habitee;
+            }
+            else { // inhabitable
+              // nothing to do : le systeme a explose
+            }
+            // if (galaxie_previous...)
+        }// for (j)
+      }// for (i)
+}
 }
 //_ ______________________________________________________________________________________________ _

@@ -19,6 +19,12 @@ public:
     virtual void rend_planete_inhabitable(int x, int y);
     virtual void rend_planete_inhabitee(int x, int y);
 
+    void update_data(std::vector<int>* mynewvector, int width, int pas);
+    void insert_vecteur_avant (std::vector <int>* newvector, int width );
+    void insert_vecteur_apres (std::vector <int>* newvector, int width );
+    void reset_lignes_fantome ();
+
+
     int width()  const { return m_width;  }
     int height() const { return m_height; }
     const int* data() const { return m_planetes.data(); }
@@ -26,15 +32,7 @@ public:
 
     void swap(galaxie& g);
 
-    //added
-    void insert_vector (int position,  std::vector<int>* vecteur_cible);
-    void insert_vector_fantome (int position, std::vector<int>* my_vector, int width);
-    void extract_vector (int position,  std::vector<int>* vecteur_cible);
-    void update_data (std::vector <int>* new_vector);
-    void print ();
-
-
-//private:
+private:
     int m_width, m_height;
     std::vector<int> m_planetes;
 };

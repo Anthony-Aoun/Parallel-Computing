@@ -1,4 +1,4 @@
 CC = mpicc
-CXX = mpic++
+CXX = mpic++ -fopenmp
 LIB = -lmpi
 MPIOPT = -oversubscribe

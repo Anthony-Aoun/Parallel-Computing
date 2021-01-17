@@ -12,7 +12,8 @@
 #include "parametres.hpp"
 #include "galaxie.hpp"
  
-int main(int argc, char *argv[]) {
+int main(int argc, char ** argv)
+{
     char commentaire[4096];
     int width, height;
     SDL_Event event;
@@ -28,14 +29,11 @@ int main(int argc, char *argv[]) {
     int rank;
     MPI_Comm_rank(globComm, &rank);
 
-
     float apparition_civ; 
     float disparition; 
     float expansion;
     float inhabitable;
-    
-    
-    //lecture des parametres par root
+
     if (rank == 0)
     {
         std::ifstream fich("parametre.txt");
@@ -51,9 +49,8 @@ int main(int argc, char *argv[]) {
         fich.getline(commentaire, 4096);
         fich >>  inhabitable;
         fich.getline(commentaire, 4096);
-        fich.close();
+        fich.close(); 
     }
-    //envoi des paramètres à tous les processus
     MPI_Bcast(&width, 1, MPI_INT, 0, MPI_COMM_WORLD);
     MPI_Bcast(&height, 1, MPI_INT, 0, MPI_COMM_WORLD);
 
@@ -67,46 +64,44 @@ int main(int argc, char *argv[]) {
     param.expansion = expansion;
     param.inhabitable = inhabitable;
 
+    int pas;
+    if (height%(nbp-1) == 0)
+        pas = int (height/(nbp-1));
+    else
+        pas  = int (height/(nbp-1))+1;
 
-    int pas = int (height/(nbp-1));
+    galaxie grande_galaxie(width, height, param.apparition_civ);// celle qu'on va afficher
+    galaxie g(width, pas+2); //le +2 pour les cellules fantomes
+    galaxie g_next(width, pas+2); //la derniere sera trop grande mais ca ne fait rien 
 
-    int Etapes [nbp-1];
+    std::vector<int> premiere_ligne (width, 0);
+    std::vector<int> derniere_ligne (width, 0);
 
-    for (int i = 0; i<nbp-1; i++) {
-        Etapes[i] = i*pas;
+    std::vector<int> grand_buffer ((nbp)*pas*width, 0);
+    int i = 0;
+    while  ( i<pas*width)// on rajoute des cases vides a la fin // pour le processus 0 qui aura aussi une partie^^
+    {
+        grand_buffer[i] = 0;
+        i++;
+    } 
+    while  ( i<width*height)
+    {
+        grand_buffer[i] = grande_galaxie.data()[i];
+        i++;
+    } 
+    while  ( i<grand_buffer.size())// on rajoute des cases vides a la fin 
+    {
+        grand_buffer[i] = 0;
+        i++;
     } 
 
-    Etapes[nbp-1] = height ;
+    //on distribue les taches (sous-matrices) sur les différents processus
+    MPI_Scatter(grand_buffer.data(), pas*width, MPI_INT, &g.data()[width], pas*width, MPI_INT, 0, MPI_COMM_WORLD);
 
-    // le premier processus sera le maitre; il affichera donc; pas de travail sur les galaxies pour lui
-    galaxie* Galaxies [nbp-1];
-    galaxie* Galaxies_next [nbp-1];
+    int deltaT = (20*52840)/width;
 
-    galaxie grande_g_next(width, height, param.apparition_civ);
-
-    for (int i = 0; i<nbp-1; i++) {
-        //pn déclare g et g_next
-        //on rajoute une ligne avant et une après. Comme ca on est tranquil
-        galaxie* g = new galaxie (width, (Etapes[i+1] - Etapes[i])+2);
-        galaxie* g_next = new galaxie (width, pas+2);
-      
-        //on remplie les petites g et g_next dans des tableaux
-        Galaxies[i] = g; //pour les petites
-        Galaxies_next[i] = g_next; //pour les petites
-        //initialisation des petites matrices...
-        for (int compteur = Etapes[i-1]*width; compteur< Etapes[i]*width; compteur++)
-        {
-            Galaxies[i]->data()[compteur+width] = grande_g_next.data()[compteur+Etapes[i-1]*width];
-        }
-    }
-
-
-    std::vector <int> buffer (pas*(width+2),0);
-    std::vector <int> buffer_reception (pas*(width+2), 0); // pour la petite galaxie
-    std::vector <int> grand_buffer (height*width, 0); // pour la grande galaxie
-    
-
-    if (rank == 0) {
+    if (rank == 0)
+    {
         std::cout << "Resume des parametres (proba par pas de temps): " << std::endl;
         std::cout << "\t Chance apparition civilisation techno : " << param.apparition_civ << std::endl;
         std::cout << "\t Chance disparition civilisation techno: " << param.disparition << std::endl;
@@ -114,36 +109,100 @@ int main(int argc, char *argv[]) {
         std::cout << "\t Chance inhabitable : " << param.inhabitable << std::endl;
         std::cout << "Proba minimale prise en compte : " << 1./RAND_MAX << std::endl;
         std::srand(std::time(nullptr));
-
+    
         SDL_Init(SDL_INIT_TIMER | SDL_INIT_VIDEO);
-        window = SDL_CreateWindow("Galaxie", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-                              width, height, SDL_WINDOW_SHOWN);
-        galaxie_renderer gr(window);
-        int deltaT = (20*52840)/width;
+    
         std::cout << "Pas de temps : " << deltaT << " années" << std::endl;
-        gr.render(grande_g_next);
-        unsigned long long temps = 0;
 
-        //envoie peties galaxies aux processus
-        for (int i = 1; i<nbp; i++) {
-            MPI_Send(Galaxies[i-1]->data(), pas*width, MPI_INT, i, 0, MPI_COMM_WORLD);
+        std::cout << std::endl;
+
+    }
+    unsigned long long temps = 0;
+
+    std::chrono::time_point<std::chrono::system_clock> start, end1, end2;
+    
+    if (rank!=0)
+    {
+        while (1)
+        {
+            mise_a_jour(param, width, pas, g.data(), g_next.data());
+            g_next.swap(g);
+            
+            //echange des info
+            if (rank%2==0)//pour les noeuds pairs (hors 0)
+            {
+                //recoit sa première ligne de l'impair qui le précède
+                MPI_Recv (&premiere_ligne[0], width, MPI_INT, rank-1, 0, MPI_COMM_WORLD, 0 );
+                //si pas dernier processus
+                if (rank <=nbp-2)
+                {
+                    //envoie sa derniere ligne (fantome) au prochain impair
+                    MPI_Send (&g.data()[(pas+1)*width],width, MPI_INT, rank+1, 0, MPI_COMM_WORLD);
+                }
+                //si pas dernier processus
+                if (rank <=nbp-2)
+                {
+                    //recoit sa derniere ligne du prochain impair
+                    MPI_Recv (&derniere_ligne[0],width, MPI_INT, rank+1, 0, MPI_COMM_WORLD, 0);
+                }
+                //envoie sa premiere ligne (fantome) a l'impair qui le précède
+                MPI_Send (g.data(),width, MPI_INT, rank-1, 0, MPI_COMM_WORLD); //rank -1 existe car rank pair et !=0
+
+                //raccord avant et après selon les vecteurs fantomes qu'il a  recu 
+                g.insert_vecteur_avant (&premiere_ligne, width);
+                g.insert_vecteur_apres (&derniere_ligne, width);
+            }
+
+            if (rank%2==1)//pour les noeuds impairs
+            {
+                if (rank <=nbp-2)
+                {
+                    MPI_Send (&g.data()[(pas+1)*width],width, MPI_INT, rank+1, 0, MPI_COMM_WORLD);
+                }
+                if (rank>1)
+                {
+                    MPI_Recv (&premiere_ligne[0], width, MPI_INT, rank-1, 0, MPI_COMM_WORLD, 0 );
+                }  
+                if (rank>1)
+                {
+                    MPI_Send (g.data(),width, MPI_INT, rank-1, 0, MPI_COMM_WORLD); //rank -1 existe car rank pair et !=0
+                }                 
+                if (rank <=nbp-2)
+                {
+                    MPI_Recv (&derniere_ligne[0],width, MPI_INT, rank+1, 0, MPI_COMM_WORLD, 0);
+                }                
+                
+                g.insert_vecteur_avant (&premiere_ligne, width);
+                g.insert_vecteur_apres (&derniere_ligne, width);
+            }
+
+            //on reset les lignes fantomes
+            g.reset_lignes_fantome();
+            g_next.reset_lignes_fantome();
+       
+            //on rassemble les sous-matrices dans la grande matrice
+            MPI_Gather (&g.data()[width], pas*width, MPI_INT, grand_buffer.data(), pas*width, MPI_INT, 0, MPI_COMM_WORLD);
         }
-
-        std::chrono::time_point<std::chrono::system_clock> start, end1, end2;
-        while (1) {
+        
+        
+    }
+    //root
+    else 
+    {
+        //affichage
+        window = SDL_CreateWindow("Galaxie", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
+                                  width, height, SDL_WINDOW_SHOWN);
+        galaxie_renderer gr(window);
+        gr.render(g);
+        while (1)
+        {
             start = std::chrono::system_clock::now();
-            //on recupere les petites galaxies + remplissage de la grande galaxie avec cellules fantomes...
-            for (int i = 1; i<nbp; i++) {
-                MPI_Recv (&buffer[0], pas*width, MPI_INT, i, 0, MPI_COMM_WORLD, 0 );
-                grande_g_next.insert_vector_fantome ( Etapes[i-1]*width , &buffer, width);
-            }
-            //... puis on envoie la grande galaxie à tout le monde ...
-            // faire deux boucles permet aux autres processus de ne pas travailler pendant que la matrice est encore en train d'etre remplie
-            for (int i = 1; i<nbp; i++) {
-                MPI_Send(grande_g_next.data(), height*width, MPI_INT, i, 0, MPI_COMM_WORLD); 
-            }
+            //on rassemble les sous-matrices dans la grande matrice
+            MPI_Gather (&g.data()[width], pas*width, MPI_INT, grand_buffer.data(), pas*width, MPI_INT, 0, MPI_COMM_WORLD);
             end1 = std::chrono::system_clock::now();
-            gr.render(grande_g_next);
+            //on passe les données à m_planetes et on affiche
+            grande_galaxie.update_data (&grand_buffer, width, pas);
+            gr.render(grande_galaxie);
             end2 = std::chrono::system_clock::now();
             
             std::chrono::duration<double> elaps1 = end1 - start;
@@ -159,32 +218,17 @@ int main(int argc, char *argv[]) {
             //_sleep(1000);
             if (SDL_PollEvent(&event) && event.type == SDL_QUIT) {
               std::cout << std::endl << "The end" << std::endl;
+              SDL_DestroyWindow(window);
+                SDL_Quit();
+                //MPI_Abort();
               break;
             }
         }
+    }
         
-        SDL_DestroyWindow(window);
-        SDL_Quit();
-    }
-
-    else 
-    { 
-        while (1)
-        {
-            //recoit grande matrice
-            MPI_Recv (&grand_buffer[0], height*width, MPI_INT, 0, 0, MPI_COMM_WORLD, 0 );
-          
-            //charge ses données dans m_planetes
-            grande_g_next.update_data (&grand_buffer);
-            
-            //met à jour la partie de la matrice dont la tache est reponsable
-            mise_a_jour(param, width, Etapes[rank-1], Etapes[rank], height,  Galaxies[rank-1]->data(), Galaxies_next[rank-1]->data(), grande_g_next.data());
-            Galaxies_next[rank-1]->swap(*Galaxies[rank-1]);
-            
-            //envoie la nouvelle petite matrice
-            MPI_Send (Galaxies[rank-1]->data(), pas*width, MPI_INT, 0, 0, MPI_COMM_WORLD);
-        }      
-    }
-    MPI_Finalize();
+    
+    SDL_DestroyWindow(window);
+    SDL_Quit();
+    MPI_Finalize ();
     return EXIT_SUCCESS;
 }

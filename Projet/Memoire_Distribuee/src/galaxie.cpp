@@ -29,6 +29,60 @@ galaxie::galaxie(int width, int height, double chance_habitee)
         }
 }
 //_ ______________________________________________________________________________________________ _
+//////////////////////////////////////////////////
+//////////////////////////////////////////////////
+//////////////////////////////////////////////////
+void 
+galaxie::update_data(std::vector<int>* mynewvector, int width, int pas)
+{
+    int size = m_planetes.size();
+    for (int i = 0; i<size; i++)
+    {
+        m_planetes[i] = mynewvector->data()[i + width*pas];
+    }
+}
+//_ ______________________________________________________________________________________________ _
+void 
+galaxie::insert_vecteur_avant (std::vector<int>* my_vector, int width)
+{
+    for (int i = 0; i<width; i++)
+    {
+        //habitee et inhabitee en meme temps
+        if (my_vector->data ()[i]==1 && m_planetes[i] == 0)// il n' y a qu'un cas ou ca change: si f=1 et existante = 0; on ne propage ni l'inhabitabilité ni la non habitabilité
+        {
+            m_planetes[i] = my_vector->data ()[i];
+        }
+    }
+}
+//_ ______________________________________________________________________________________________ _
+void 
+galaxie::insert_vecteur_apres (std::vector<int>* my_vector, int width)
+{
+    int size = m_planetes.size();
+    for (int i = 0; i<width; i++)
+    { 
+        if (my_vector->data ()[i]==1 && m_planetes[i+size-width] == 0)// il n' y a qu'un cas ou ca change: si f=1 et existante = 0; on ne propageni l'inhabitabilité ni la non habitabilité
+        {
+            m_planetes[i+size-width] = my_vector->data ()[i];
+        }
+        
+    }
+}
+//_ ______________________________________________________________________________________________ _
+void
+galaxie::reset_lignes_fantome ()
+{
+    int size = m_planetes.size();
+    for (int i = 0; i<m_width; i++)
+    {
+        m_planetes[i] = habitable;
+        m_planetes[i+size-m_width] = habitable;
+    }
+}
+//////////////////////////////////////////////////
+//////////////////////////////////////////////////
+//////////////////////////////////////////////////
+//_ ______________________________________________________________________________________________ _
 void 
 galaxie::rend_planete_habitee(int x, int y)
 {
@@ -40,18 +94,6 @@ galaxie::rend_planete_inhabitable(int x, int y)
 {
     m_planetes[y*m_width + x] = inhabitable;
 }
-
-//_ ______________________________________________________________________________________________ _
-void 
-galaxie::print ()
-{
-    for (long unsigned int i = 0; i<m_planetes.size(); i++)
-    {
-        std::cout<<m_planetes[i]<< "; ";
-    }
-    std::cout <<std::endl;
-}
-
 //_ ______________________________________________________________________________________________ _
 void
 galaxie::rend_planete_inhabitee(int x, int y)
@@ -64,84 +106,6 @@ galaxie::swap(galaxie& g)
 {
     g.m_planetes.swap(this->m_planetes);
 }
-//_ ______________________________________________________________________________________________ _
-void galaxie::insert_vector (int position, std::vector<int>* my_vector)
-{
-    int taille = my_vector->size();
-    int n = m_planetes.size ();
-    for (int i = 0; i<taille; i++)
-    {
-        if (i + position < n)
-        {
-            m_planetes[i+position] = my_vector->data ()[i];
-            if (m_planetes[i+position]!=0 && i>436906)
-                std::cout<< i+position<<"insere"<<std::endl;
-        }
-    }
-    
-}
-//_ ______________________________________________________________________________________________ _
-void galaxie::insert_vector_fantome (int position, std::vector<int>* my_vector, int width)
-{
-    int taille = my_vector->size() - 2*width;
-    int n = m_planetes.size ();
-    //insertion normale...
-    for (int i = 0; i<taille; i++)
-    {
-        if (i + position < n)
-        {
-            m_planetes[i+position] = my_vector->data ()[i+width];
-        }
-    }
-    //insertion des cases fantomes
-    if (position>=width)// on regarde la ligne du bas (celle qui est en plus) NB: on ne peut que s'étendre sur des cases fantomes, pas les rendre inhabitables
-    {
-        for (int i = 0; i<width; i++)
-        {
-            if (i + position < n)
-            {
-                //mise à jour
-                if (my_vector->data ()[i]!=0 && m_planetes[i+position-width] == 0)
-                {
-                    m_planetes[i+position-width] = my_vector->data ()[i];
-                }
-            }
-        }
-    }
-    if (position<n - width)
-    {
-        for (int i = taille; i<taille+width; i++)
-        {
-            if (i + position < n)//redondant avec le premier if normalement
-            {
-                if (my_vector->data ()[i]!=0 && m_planetes[i+position-width] == 0)
-                {
-                    m_planetes[i+position] = my_vector->data ()[i];
-                }
-            }
-        }
-    }
-    
-}
-//_ ______________________________________________________________________________________________ _
-void galaxie::extract_vector (int position,  std::vector<int>* vecteur_cible)
-{
-    int taille = vecteur_cible->size ();
-    int n = m_planetes.size();
-    for (int i = 0; i<taille; i++)
-    {
-        if (i + position < n)
-            (*vecteur_cible)[i] = m_planetes[i+position];
-    }
-}
-
-//_ ______________________________________________________________________________________________ _
-void galaxie::update_data (std::vector <int>* new_vector)
-{
-    m_planetes = *new_vector;
-}
-
-
 //# ############################################################################################## #
 galaxie_renderer::galaxie_renderer(SDL_Window* win)
 {
@@ -199,4 +163,3 @@ galaxie_renderer::render(const galaxie& g)
 
     SDL_RenderPresent(m_renderer);
 }
-

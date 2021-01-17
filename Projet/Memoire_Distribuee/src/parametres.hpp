@@ -26,6 +26,6 @@ expansion calcul_expansion(const parametres& c);
 bool      calcul_depeuplement(const parametres& c);
 bool      calcul_inhabitable(const parametres& c);
 
-void mise_a_jour(const parametres& params, int width, int height_debut, int height_fin, int height_global,  int* galaxie_previous,  int* galaxie_next,  int* galaxie_previous_full);
+void mise_a_jour(const parametres& p, int width, int height, const int* galaxie_previous, int* galaxie_next);
 
 #endif

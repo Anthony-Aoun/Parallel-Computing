@@ -20,7 +20,7 @@ int main(int argc, char ** argv)
     SDL_Window   * window;
 
     parametres param;
-    int provided;
+    int provided; // = MPI_THREAD_MULTIPLE
     MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &provided);
     MPI_Comm globComm;
     MPI_Comm_dup(MPI_COMM_WORLD, &globComm);

@@ -47,12 +47,17 @@ unioformément distribués selon un modèle stochastique.
 plus d'infos sur default-random-engine : http://www.cplusplus.com/reference/random/default_random_engine/
 plus d'infos sur random-device : https://www.cplusplus.com/reference/random/random_device/
 
-L'execution après parallélisation de boucle en mémoire partagée donne à présent, pour 4 threads :
+L'execution après parallélisation de boucle en mémoire partagée donne à présent :
 
-CPU(ms) : calcul 1.968  affichage 1.7388
+- pour 2 threads : CPU(ms) : calcul 3.227  affichage 1.708
+- pour 3 threads : CPU(ms) : calcul 2.453  affichage 1.736
+- pour 4 threads : CPU(ms) : calcul 1.968  affichage 1.738
 
-On a gagné considérablement en temps de calcul avec un speedup S(n) = 11.
+On a gagné considérablement en temps de calcul avec un speedup S(n) = 11 pour 4 threads.
 
+Il faut noter qu'à partir de 5 threads, le temps de calcul se stabilise à environ 2ms. L'optimisation maximale est 
+donc atteinte pour 4 threads.
+ 
 On remarque à présent que la boucle de calcul et la boucle d’affichage prennent un temps similaire.
 
 ## Recouvrement calcul / affichage en mémoire partagée
@@ -66,10 +71,12 @@ mise à jour est elle même multithreadée garce à la parallélisation effectu�
 
 L'execution après recouvrement des entrées/sorties par du calcul donne :
 
-CPU(ms) : calcul 6.057  affichage 4.0176
+- pour 2 threads : CPU(ms) : calcul 5.852  affichage 3.8912
+- pour 3 threads : CPU(ms) : calcul 5.844  affichage 3.683
+- pour 4 threads : CPU(ms) : calcul 6.057  affichage 4.0176
 
 On constate qu'on perd en accélération puisque le temps d'affichage a augmenté et le temps de calcul est plus long que
-celui de la première partie.Il est possible que l'on peut pas accélérer le code puisque l'affichage prend trop de bande
+celui de la première partie. Il est possible que l'on ne peut pas accélérer le code puisque l'affichage prend trop de bande
 passante mémoire et empêche par conséquent d'avoir une accélération pour calculer la nouvelle génération. Il y a donc 
 memory bound.
 
@@ -100,11 +107,15 @@ les zones critiques après reception des cellules fantomes. Finalement on demand
 de l'affichage.
 
 
-L'execution après parallélisation en mémoire distribuée avec 3 processus donne :
+L'execution après parallélisation en mémoire distribuée donne :
 
-CPU(ms) : calcul 15.695  affichage 3.7012
+- pour 2 processus : CPU(ms) : calcul 22.526  affichage 3.403
+- pour 3 processus : CPU(ms) : calcul 15.695  affichage 3.7012
+- pour 4 processus : CPU(ms) : calcul 10.145  affichage 3.5988
 
-Nous remarquons que nous avons légèrement gagné en temps de calcul (speedup = 1.5) et même perdu en temps d'affichage (speedup < 1).
+Au delà de 4 processus, le temps de calcul devient égal vire supérieure au temps de calcul séquentiel. Ce comportement est normal
+vu que ma machine a 4 processeurs.
+Nous remarquons que nous avons gagné en temps de calcul (speedup = 2 pour 4 processus) mais perdu en temps d'affichage (speedup < 1).
 Ceci peut être expliqué par le fait que ma machine a uniquement 2 coeurs et que l'échange de messages au sein d'MPI est
 couteux. De même l'existence de zones séquentielles non parallélisables peut rendre difficile l'optimisation en temps de
 calcul et d'affichage.

@@ -59,7 +59,7 @@ mise_a_jour(const parametres& params, int width, int height, const char* galaxie
     
     memcpy(galaxie_next, galaxie_previous, width*height*sizeof(char));
 
- omp_set_num_threads(4);
+ omp_set_num_threads(5);
  #pragma omp parallel
 {
     std::random_device thread_device;
